@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     
     let wifiInterval = null;
-    const espIpAddress = "192.168.1.104";
+    const espIpAddress = "192.168.4.1";
   
     let isSimulating = false;
     let simulationInterval = null;
