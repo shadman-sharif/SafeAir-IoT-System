@@ -18,8 +18,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const simulateBtn = document.getElementById('simulateBtn');
     const resetBtn = document.getElementById('resetBtn');
 
+    
     let wifiInterval = null;
     const espIpAddress = "192.168.1.104";
+  
     let isSimulating = false;
     let simulationInterval = null;
 
@@ -78,12 +80,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Wi-Fi Connection Toggle
+    // --- UPDATE BUTTON LOGIC FOR WI-FI ---
+    serialConnectBtn.innerHTML = '<i class="fa-solid fa-wifi"></i> Connect Wi-Fi'; // Set initial button text
+
     serialConnectBtn.addEventListener('click', () => {
         if (!wifiInterval) {
+            // Start polling the ESP8266 web server every 1 second
             wifiInterval = setInterval(fetchGasDataFromESP, 1000);
             updateConnectionState(true);
         } else {
+            // Stop polling
             clearInterval(wifiInterval);
             wifiInterval = null;
             updateConnectionState(false);
@@ -92,17 +98,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchGasDataFromESP() {
         try {
+            // This makes the HTTP request to your ESP8266 IP address
             let response = await fetch(`http://${espIpAddress}/data`, { mode: 'cors' });
+            if (!response.ok) throw new Error('Network response was not OK');
+            
             let gasText = await response.text();
             let gasValue = parseFloat(gasText);
 
             if (!isNaN(gasValue)) {
-                // Map Arduino raw reading (0-1023) to PPM scale (0-1500)
+                // Map Arduino's raw reading (0-1023) to a PPM scale (0-1500)
                 let ppmValue = (gasValue / 1023) * 1500;
                 updateDashboardValues(ppmValue);
             }
         } catch (error) {
             console.error('Failed to fetch data from ESP8266 Wi-Fi:', error);
+            // Optionally show a temporary error state on UI
+            connectionText.textContent = 'Wi-Fi Error: Check IP/Network';
+            connectionBadge.className = 'connection-badge disconnected';
         }
     }
 
@@ -111,14 +123,21 @@ document.addEventListener('DOMContentLoaded', () => {
             connectionBadge.className = 'connection-badge connected';
             connectionText.textContent = 'ESP8266 Online (Wi-Fi)';
             serialConnectBtn.innerHTML = '<i class="fa-solid fa-wifi"></i> Disconnect Wi-Fi';
+            serialConnectBtn.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(34, 197, 94, 0.1))'; // Green glow on disconnect button
+            serialConnectBtn.style.borderColor = 'rgba(34, 197, 94, 0.6)';
+            serialConnectBtn.style.color = 'var(--accent-green)';
             wifiIcon.style.color = 'var(--accent-green)';
         } else {
             connectionBadge.className = 'connection-badge disconnected';
             connectionText.textContent = 'ESP8266 Offline';
             serialConnectBtn.innerHTML = '<i class="fa-solid fa-wifi"></i> Connect Wi-Fi';
+            serialConnectBtn.style.background = ''; // Reset button style
+            serialConnectBtn.style.borderColor = '';
+            serialConnectBtn.style.color = '';
             wifiIcon.style.color = 'inherit';
         }
     }
+    // -----------------------------------
 
     function updateDashboardValues(ppm) {
         const timeString = new Date().toLocaleTimeString();
