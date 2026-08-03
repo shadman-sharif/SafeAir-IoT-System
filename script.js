@@ -18,10 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const simulateBtn = document.getElementById('simulateBtn');
     const resetBtn = document.getElementById('resetBtn');
 
-    let port;
-    let reader;
-    let inputDone;
-    let inputStream;
+    let wifiInterval = null;
+    const espIpAddress = "192.168.1.104";
     let isSimulating = false;
     let simulationInterval = null;
 
@@ -62,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 y: {
                     beginAtZero: true,
-                    suggestedMax: 1000,
+                    suggestedMax: 1500,
                     grid: { color: 'rgba(255, 255, 255, 0.08)' },
                     ticks: { color: '#94a3b8', font: { size: 10, family: 'JetBrains Mono' } }
                 }
@@ -80,95 +78,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    serialConnectBtn.addEventListener('click', async () => {
-        if (!('serial' in navigator)) {
-            alert('Web Serial API is not supported in this browser. Please use Google Chrome or Microsoft Edge.');
-            return;
-        }
-
-        try {
-            if (!port) {
-                port = await navigator.serial.requestPort();
-                await port.open({ baudRate: 115200 });
-
-                updateConnectionState(true);
-                readSerialData();
-            } else {
-                await closeSerialConnection();
-            }
-        } catch (error) {
-            console.error('Serial connection error:', error);
+    // Wi-Fi Connection Toggle
+    serialConnectBtn.addEventListener('click', () => {
+        if (!wifiInterval) {
+            wifiInterval = setInterval(fetchGasDataFromESP, 1000);
+            updateConnectionState(true);
+        } else {
+            clearInterval(wifiInterval);
+            wifiInterval = null;
             updateConnectionState(false);
         }
     });
 
-    async function readSerialData() {
-        const textDecoder = new TextDecoderStream();
-        inputDone = port.readable.pipeTo(textDecoder.writable);
-        inputStream = textDecoder.readable;
-        reader = inputStream.getReader();
-
+    async function fetchGasDataFromESP() {
         try {
-            let buffer = '';
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
-                if (value) {
-                    buffer += value;
-                    let lines = buffer.split('\n');
-                    buffer = lines.pop();
+            let response = await fetch(`http://${espIpAddress}/data`, { mode: 'cors' });
+            let gasText = await response.text();
+            let gasValue = parseFloat(gasText);
 
-                    for (let line of lines) {
-                        parseIncomingData(line.trim());
-                    }
-                }
+            if (!isNaN(gasValue)) {
+                // Map Arduino raw reading (0-1023) to PPM scale (0-1500)
+                let ppmValue = (gasValue / 1023) * 1500;
+                updateDashboardValues(ppmValue);
             }
         } catch (error) {
-            console.error('Read error:', error);
-        } finally {
-            reader.releaseLock();
+            console.error('Failed to fetch data from ESP8266 Wi-Fi:', error);
         }
-    }
-
-    async function closeSerialConnection() {
-        if (reader) {
-            await reader.cancel();
-            await inputDone.catch(() => {});
-        }
-        if (port) {
-            await port.close();
-            port = null;
-        }
-        updateConnectionState(false);
     }
 
     function updateConnectionState(isConnected) {
         if (isConnected) {
             connectionBadge.className = 'connection-badge connected';
-            connectionText.textContent = 'ESP8266 Online (USB)';
-            serialConnectBtn.innerHTML = '<i class="fa-solid fa-plug-circle-xmark"></i> Disconnect';
+            connectionText.textContent = 'ESP8266 Online (Wi-Fi)';
+            serialConnectBtn.innerHTML = '<i class="fa-solid fa-wifi"></i> Disconnect Wi-Fi';
             wifiIcon.style.color = 'var(--accent-green)';
         } else {
             connectionBadge.className = 'connection-badge disconnected';
             connectionText.textContent = 'ESP8266 Offline';
-            serialConnectBtn.innerHTML = '<i class="fa-solid fa-plug"></i> Connect USB';
+            serialConnectBtn.innerHTML = '<i class="fa-solid fa-wifi"></i> Connect Wi-Fi';
             wifiIcon.style.color = 'inherit';
-        }
-    }
-
-    function parseIncomingData(dataStr) {
-        if (!dataStr) return;
-        let ppmValue = 0;
-
-        if (dataStr.includes(':')) {
-            const parts = dataStr.split(':');
-            ppmValue = parseFloat(parts[1]);
-        } else {
-            ppmValue = parseFloat(dataStr);
-        }
-
-        if (!isNaN(ppmValue)) {
-            updateDashboardValues(ppmValue);
         }
     }
 
@@ -177,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPpmEl.textContent = Math.round(ppm);
         timestampText.textContent = `Synced at ${timeString}`;
 
-        const sliderPct = Math.min(Math.max((ppm / 2000) * 100, 2), 100);
+        const sliderPct = Math.min(Math.max((ppm / 1500) * 100, 2), 100);
         sliderFill.style.width = `${sliderPct}%`;
 
         if (ppm < 400) {
@@ -268,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateSensorPillsStatus(statusColor, ppmText) {
         const pills = [
             { label: 'MQ-2 Gas', status: statusColor, ppm: ppmText },
-            { label: 'ESP8266 Wi-Fi', status: port ? 'green' : 'yellow', ppm: port ? 'Connected' : 'Standby' },
+            { label: 'ESP8266 Wi-Fi', status: wifiInterval ? 'green' : 'yellow', ppm: wifiInterval ? 'Connected' : 'Standby' },
             { label: 'System Temp', status: 'green', ppm: '28.4°C' }
         ];
         renderSensorPills(pills);
