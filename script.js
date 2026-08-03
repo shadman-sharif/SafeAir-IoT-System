@@ -1,297 +1,318 @@
-let liveChart = null;
-let chartLabels = ["12:00", "12:05", "12:10", "12:15", "12:20", "12:25", "12:30"];
-let chartDataPoints = [0, 0, 0, 0, 0, 0, 0];
-let port, reader;
-let isConnected = false;
-
 document.addEventListener('DOMContentLoaded', () => {
-    initLiveChart();
-    renderPills(0);
-
-    generateFloatingParticles();
-
-    document.querySelectorAll('.side-nav .nav-item').forEach(item => {
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            
-            document.querySelectorAll('.side-nav .nav-item').forEach(nav => nav.classList.remove('active'));
-            item.classList.add('active');
-
-            const target = item.getAttribute('href');
-            handleNavigation(target);
-        });
-    });
-
-    document.getElementById('serialConnectBtn').addEventListener('click', connectESP8266Serial);
-
-    document.getElementById('emergencyBtn').addEventListener('click', () => {
-        updateSensorState(950, 'danger', 'CRITICAL', 'Emergency manual override triggered.');
-    });
-
-    document.getElementById('simulateBtn').addEventListener('click', () => {
-        const randomSimVal = Math.floor(Math.random() * 600) + 50;
-        let state = 'safe';
-        let title = 'Safe';
-        let desc = 'Air quality is within normal range.';
-        if (randomSimVal >= 400 && randomSimVal < 800) {
-            state = 'warning';
-            title = 'Warning';
-            desc = 'Elevated gas density logged. Ventilation active.';
-        } else if (randomSimVal >= 800) {
-            state = 'danger';
-            title = 'Hazard';
-            desc = 'Critical concentrations detected!';
-        }
-        updateSensorState(randomSimVal, state, title, desc);
-    });
-
-    document.getElementById('resetBtn').addEventListener('click', () => {
-        updateSensorState(45, 'safe', 'Safe', 'System normalized and monitoring.');
-    });
-});
-
-function handleNavigation(target) {
-    if (target === '#home') {
-        console.log("Switched to Dashboard View");
-    } else if (target === '#hardware') {
-        alert("ESP8266 Link Status: Check USB Serial or Wi-Fi connection parameters.");
-    } else if (target === '#alerts') {
-        alert("Alert Threshold Configuration: Currently set to Warn >= 400ppm, Hazard >= 800ppm.");
-    } else if (target === '#settings') {
-        alert("System Settings: Adjust baud rate, calibration offsets, or notification parameters here.");
-    }
-}
-
-function generateFloatingParticles() {
-    const container = document.getElementById('particleContainer');
-    if (!container) return;
-    for (let i = 0; i < 8; i++) {
-        const span = document.createElement('span');
-        span.className = 'particle';
-        span.style.left = `${Math.random() * 95}%`;
-        span.style.animationDuration = `${10 + Math.random() * 10}s`;
-        span.style.animationDelay = `${Math.random() * 5}s`;
-        container.appendChild(span);
-    }
-}
-
-async function connectESP8266Serial() {
-    if (!('serial' in navigator)) {
-        alert('Web Serial API is not supported by your browser. Please use Google Chrome or Edge.');
-        return;
-    }
-
-    try {
-        port = await navigator.serial.requestPort();
-        await port.open({ baudRate: 115200 });
-        
-        isConnected = true;
-        updateConnectionUI(true);
-        readSerialData();
-    } catch (error) {
-        console.error('Serial connection error:', error);
-        isConnected = false;
-        updateConnectionUI(false);
-    }
-}
-
-async function readSerialData() {
-    const textDecoder = new TextDecoderStream();
-    const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
-    reader = textDecoder.readable.getReader();
-
-    try {
-        let buffer = '';
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            buffer += value;
-            let lines = buffer.split('\n');
-            buffer = lines.pop();
-
-            for (let line of lines) {
-                parseESPData(line.trim());
-            }
-        }
-    } catch (error) {
-        console.error('Error reading serial data:', error);
-    } finally {
-        reader.releaseLock();
-    }
-}
-
-function parseESPData(dataString) {
-    let ppmVal = 0;
-    if (dataString.startsWith("PPM:")) {
-        ppmVal = parseInt(dataString.split(":")[1]);
-    } else {
-        ppmVal = parseInt(dataString);
-    }
-
-    if (!isNaN(ppmVal)) {
-        let state = 'safe';
-        let title = 'Safe';
-        let desc = 'ESP8266 sensor reporting normal range.';
-
-        if (ppmVal >= 400 && ppmVal < 800) {
-            state = 'warning';
-            title = 'Warning';
-            desc = 'ESP8266 detected moderate gas increase.';
-        } else if (ppmVal >= 800) {
-            state = 'danger';
-            title = 'Hazard';
-            desc = 'ESP8266 detected critical hazard levels!';
-        }
-
-        updateSensorState(ppmVal, state, title, desc);
-    }
-}
-
-function updateConnectionUI(connected) {
-    const badge = document.getElementById('connectionBadge');
-    const text = document.getElementById('connectionText');
-    const wifiIcon = document.getElementById('wifiIcon');
-    const btn = document.getElementById('serialConnectBtn');
-
-    if (connected) {
-        badge.className = 'connection-badge connected';
-        text.textContent = 'ESP8266 Connected';
-        wifiIcon.style.color = 'var(--accent-green)';
-        btn.textContent = 'Connected USB';
-    } else {
-        badge.className = 'connection-badge disconnected';
-        text.textContent = 'ESP8266 Offline';
-        wifiIcon.style.color = 'var(--text-muted)';
-        btn.textContent = 'Connect USB';
-    }
-}
-
-function renderPills(ppm) {
-    const container = document.getElementById('sensorPillsContainer');
-    container.innerHTML = '';
-
-    const pill = document.createElement('div');
-    pill.className = 'sensor-pill';
-    
-    let dotClass = 'green';
-    if (ppm >= 400 && ppm < 800) dotClass = 'yellow';
-    if (ppm >= 800) dotClass = 'red';
-
-    pill.innerHTML = `
-        <div class="dot-status ${dotClass}"></div>
-        <span>ESP8266 Node</span>
-        <span style="color: var(--text-muted); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem;">${ppm} ppm</span>
-    `;
-    container.appendChild(pill);
-}
-
-function updateSensorState(ppm, statusType, titleText, descText) {
+    const connectionBadge = document.getElementById('connectionBadge');
+    const connectionText = document.getElementById('connectionText');
+    const serialConnectBtn = document.getElementById('serialConnectBtn');
+    const currentPpmEl = document.getElementById('currentPpm');
+    const timestampText = document.getElementById('timestampText');
+    const sliderFill = document.getElementById('sliderFill');
     const statusTitle = document.getElementById('statusTitle');
     const statusDesc = document.getElementById('statusDesc');
-    const currentPpm = document.getElementById('currentPpm');
+    const heroIcon = document.getElementById('heroIcon');
+    const statusIconBox = document.getElementById('statusIconBox');
     const mainCard = document.getElementById('mainCard');
     const ambientGlow = document.getElementById('ambientGlow');
+    const wifiIcon = document.getElementById('wifiIcon');
+    const sensorPillsContainer = document.getElementById('sensorPillsContainer');
 
-    statusTitle.classList.remove('pulse-text');
-    void statusTitle.offsetWidth; 
-    statusTitle.classList.add('pulse-text');
+    const emergencyBtn = document.getElementById('emergencyBtn');
+    const simulateBtn = document.getElementById('simulateBtn');
+    const resetBtn = document.getElementById('resetBtn');
 
-    statusTitle.textContent = titleText;
-    statusDesc.textContent = descText;
-    currentPpm.textContent = ppm;
+    let port;
+    let reader;
+    let inputDone;
+    let inputStream;
+    let isSimulating = false;
+    let simulationInterval = null;
 
-    const now = new Date();
-    document.getElementById('timestampText').textContent = `Updated ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+    const initialPills = [
+        { label: 'MQ-2 Gas', status: 'green', ppm: '0 ppm' },
+        { label: 'ESP8266 Wi-Fi', status: 'yellow', ppm: 'Standby' },
+        { label: 'System Temp', status: 'green', ppm: '28.4°C' }
+    ];
+    renderSensorPills(initialPills);
 
-    let fillPercent = (ppm / 1500) * 100;
-    if (fillPercent > 100) fillPercent = 100;
-    
-    const sliderFill = document.getElementById('sliderFill');
-    sliderFill.style.width = `${fillPercent}%`;
-
-    const statusIconBox = document.getElementById('statusIconBox');
-    const heroIcon = document.getElementById('heroIcon');
-
-    mainCard.className = 'card status-display-card';
-    if (statusType === 'safe') {
-        sliderFill.style.backgroundColor = 'var(--accent-green)';
-        statusIconBox.style.background = 'rgba(34, 197, 94, 0.2)';
-        statusIconBox.style.borderColor = 'rgba(34, 197, 94, 0.5)';
-        statusIconBox.style.color = 'var(--accent-green)';
-        heroIcon.className = 'fa-solid fa-heart-pulse';
-        ambientGlow.style.background = 'radial-gradient(circle, rgba(34, 197, 94, 0.18) 0%, rgba(0, 0, 0, 0) 70%)';
-    } else if (statusType === 'warning') {
-        sliderFill.style.backgroundColor = 'var(--accent-yellow)';
-        statusIconBox.style.background = 'rgba(245, 158, 11, 0.2)';
-        statusIconBox.style.borderColor = 'rgba(245, 158, 11, 0.5)';
-        statusIconBox.style.color = 'var(--accent-yellow)';
-        heroIcon.className = 'fa-solid fa-triangle-exclamation';
-        ambientGlow.style.background = 'radial-gradient(circle, rgba(245, 158, 11, 0.2) 0%, rgba(0, 0, 0, 0) 70%)';
-    } else {
-        sliderFill.style.backgroundColor = 'var(--accent-red)';
-        statusIconBox.style.background = 'rgba(239, 68, 68, 0.2)';
-        statusIconBox.style.borderColor = 'rgba(239, 68, 68, 0.5)';
-        statusIconBox.style.color = 'var(--accent-red)';
-        heroIcon.className = 'fa-solid fa-radiation';
-        mainCard.classList.add('state-danger');
-        ambientGlow.style.background = 'radial-gradient(circle, rgba(239, 68, 68, 0.3) 0%, rgba(0, 0, 0, 0) 70%)';
-    }
-
-    renderPills(ppm);
-    updateChartStream(ppm);
-}
-
-function initLiveChart() {
     const ctx = document.getElementById('liveGasChart').getContext('2d');
+    const maxDataPoints = 20;
     
-    liveChart = new Chart(ctx, {
+    const liveGasChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: chartLabels,
+            labels: [],
             datasets: [{
-                data: chartDataPoints,
-                borderColor: '#06b6d4',
-                backgroundColor: 'rgba(6, 182, 212, 0.12)',
+                label: 'Gas Concentration (PPM)',
+                data: [],
+                borderColor: '#22c55e',
+                backgroundColor: 'rgba(34, 197, 94, 0.15)',
                 borderWidth: 3,
                 fill: true,
-                tension: 0.4,
-                pointRadius: 3,
-                pointBackgroundColor: '#06b6d4',
-                pointHoverRadius: 7
+                tension: 0.35,
+                pointRadius: 4,
+                pointBackgroundColor: '#22c55e'
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: true }
-            },
+            animation: { duration: 200 },
             scales: {
                 x: {
-                    grid: { display: false },
-                    ticks: { color: '#94a3b8', font: { size: 10 } }
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8', font: { size: 10, family: 'JetBrains Mono' } }
                 },
                 y: {
-                    grid: { color: 'rgba(255, 255, 255, 0.03)' },
-                    ticks: { color: '#94a3b8', font: { size: 10 } }
+                    beginAtZero: true,
+                    suggestedMax: 1000,
+                    grid: { color: 'rgba(255, 255, 255, 0.08)' },
+                    ticks: { color: '#94a3b8', font: { size: 10, family: 'JetBrains Mono' } }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(5, 7, 12, 0.95)',
+                    titleFont: { family: 'JetBrains Mono' },
+                    bodyFont: { family: 'JetBrains Mono' },
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                    borderWidth: 1
                 }
             }
         }
     });
-}
 
-function updateChartStream(newVal) {
-    if (!liveChart) return;
-    
-    const now = new Date();
-    const timeLabel = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    
-    chartLabels.shift();
-    chartLabels.push(timeLabel);
-    
-    chartDataPoints.shift();
-    chartDataPoints.push(newVal);
-    
-    liveChart.update('none');
-}
+    serialConnectBtn.addEventListener('click', async () => {
+        if (!('serial' in navigator)) {
+            alert('Web Serial API is not supported in this browser. Please use Google Chrome or Microsoft Edge.');
+            return;
+        }
+
+        try {
+            if (!port) {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
+
+                updateConnectionState(true);
+                readSerialData();
+            } else {
+                await closeSerialConnection();
+            }
+        } catch (error) {
+            console.error('Serial connection error:', error);
+            updateConnectionState(false);
+        }
+    });
+
+    async function readSerialData() {
+        const textDecoder = new TextDecoderStream();
+        inputDone = port.readable.pipeTo(textDecoder.writable);
+        inputStream = textDecoder.readable;
+        reader = inputStream.getReader();
+
+        try {
+            let buffer = '';
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                if (value) {
+                    buffer += value;
+                    let lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (let line of lines) {
+                        parseIncomingData(line.trim());
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Read error:', error);
+        } finally {
+            reader.releaseLock();
+        }
+    }
+
+    async function closeSerialConnection() {
+        if (reader) {
+            await reader.cancel();
+            await inputDone.catch(() => {});
+        }
+        if (port) {
+            await port.close();
+            port = null;
+        }
+        updateConnectionState(false);
+    }
+
+    function updateConnectionState(isConnected) {
+        if (isConnected) {
+            connectionBadge.className = 'connection-badge connected';
+            connectionText.textContent = 'ESP8266 Online (USB)';
+            serialConnectBtn.innerHTML = '<i class="fa-solid fa-plug-circle-xmark"></i> Disconnect';
+            wifiIcon.style.color = 'var(--accent-green)';
+        } else {
+            connectionBadge.className = 'connection-badge disconnected';
+            connectionText.textContent = 'ESP8266 Offline';
+            serialConnectBtn.innerHTML = '<i class="fa-solid fa-plug"></i> Connect USB';
+            wifiIcon.style.color = 'inherit';
+        }
+    }
+
+    function parseIncomingData(dataStr) {
+        if (!dataStr) return;
+        let ppmValue = 0;
+
+        if (dataStr.includes(':')) {
+            const parts = dataStr.split(':');
+            ppmValue = parseFloat(parts[1]);
+        } else {
+            ppmValue = parseFloat(dataStr);
+        }
+
+        if (!isNaN(ppmValue)) {
+            updateDashboardValues(ppmValue);
+        }
+    }
+
+    function updateDashboardValues(ppm) {
+        const timeString = new Date().toLocaleTimeString();
+        currentPpmEl.textContent = Math.round(ppm);
+        timestampText.textContent = `Synced at ${timeString}`;
+
+        const sliderPct = Math.min(Math.max((ppm / 2000) * 100, 2), 100);
+        sliderFill.style.width = `${sliderPct}%`;
+
+        if (ppm < 400) {
+            setSafeState(ppm);
+        } else if (ppm >= 400 && ppm < 800) {
+            setWarningState(ppm);
+        } else {
+            setDangerState(ppm);
+        }
+
+        updateChart(timeString, ppm);
+    }
+
+    function setSafeState(ppm) {
+        statusTitle.textContent = 'Safe';
+        statusDesc.textContent = 'Air quality levels are normal. No hazardous gas detected.';
+        heroIcon.className = 'fa-solid fa-shield-heart';
+        statusIconBox.style.background = 'rgba(34, 197, 94, 0.2)';
+        statusIconBox.style.borderColor = 'rgba(34, 197, 94, 0.6)';
+        statusIconBox.style.color = 'var(--accent-green)';
+        statusIconBox.style.boxShadow = '0 0 15px rgba(34, 197, 94, 0.3)';
+        sliderFill.style.background = 'var(--accent-green)';
+        sliderFill.style.boxShadow = '0 0 10px var(--accent-green)';
+        ambientGlow.style.background = 'radial-gradient(circle, rgba(34, 197, 94, 0.25) 0%, rgba(0, 0, 0, 0) 70%)';
+        mainCard.classList.remove('state-danger');
+        updateChartColor('#22c55e', 'rgba(34, 197, 94, 0.15)');
+        updateSensorPillsStatus('green', `${Math.round(ppm)} ppm`);
+    }
+
+    function setWarningState(ppm) {
+        statusTitle.textContent = 'Caution';
+        statusDesc.textContent = 'Elevated gas concentration detected. Monitor area closely.';
+        heroIcon.className = 'fa-solid fa-triangle-exclamation';
+        statusIconBox.style.background = 'rgba(245, 158, 11, 0.2)';
+        statusIconBox.style.borderColor = 'rgba(245, 158, 11, 0.6)';
+        statusIconBox.style.color = 'var(--accent-yellow)';
+        statusIconBox.style.boxShadow = '0 0 15px rgba(245, 158, 11, 0.3)';
+        sliderFill.style.background = 'var(--accent-yellow)';
+        sliderFill.style.boxShadow = '0 0 10px var(--accent-yellow)';
+        ambientGlow.style.background = 'radial-gradient(circle, rgba(245, 158, 11, 0.25) 0%, rgba(0, 0, 0, 0) 70%)';
+        mainCard.classList.remove('state-danger');
+        updateChartColor('#f59e0b', 'rgba(245, 158, 11, 0.15)');
+        updateSensorPillsStatus('yellow', `${Math.round(ppm)} ppm`);
+    }
+
+    function setDangerState(ppm) {
+        statusTitle.textContent = 'Danger!';
+        statusDesc.textContent = 'CRITICAL GAS SPIKE! Immediate ventilation or evacuation required!';
+        heroIcon.className = 'fa-solid fa-radiation';
+        statusIconBox.style.background = 'rgba(239, 68, 68, 0.25)';
+        statusIconBox.style.borderColor = 'rgba(239, 68, 68, 0.8)';
+        statusIconBox.style.color = 'var(--accent-red)';
+        statusIconBox.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.5)';
+        sliderFill.style.background = 'var(--accent-red)';
+        sliderFill.style.boxShadow = '0 0 12px var(--accent-red)';
+        ambientGlow.style.background = 'radial-gradient(circle, rgba(239, 68, 68, 0.35) 0%, rgba(0, 0, 0, 0) 70%)';
+        mainCard.classList.add('state-danger');
+        updateChartColor('#ef4444', 'rgba(239, 68, 68, 0.15)');
+        updateSensorPillsStatus('red', `${Math.round(ppm)} ppm`);
+    }
+
+    function updateChart(label, value) {
+        liveGasChart.data.labels.push(label);
+        liveGasChart.data.datasets[0].data.push(value);
+
+        if (liveGasChart.data.labels.length > maxDataPoints) {
+            liveGasChart.data.labels.shift();
+            liveGasChart.data.datasets[0].data.shift();
+        }
+        liveGasChart.update();
+    }
+
+    function updateChartColor(borderColor, bgColor) {
+        liveGasChart.data.datasets[0].borderColor = borderColor;
+        liveGasChart.data.datasets[0].pointBackgroundColor = borderColor;
+        liveGasChart.data.datasets[0].backgroundColor = bgColor;
+    }
+
+    function renderSensorPills(pills) {
+        sensorPillsContainer.innerHTML = pills.map(p => `
+            <div class="sensor-pill">
+                <span class="dot-status ${p.status}"></span>
+                <span>${p.label}: <strong>${p.ppm}</strong></span>
+            </div>
+        `).join('');
+    }
+
+    function updateSensorPillsStatus(statusColor, ppmText) {
+        const pills = [
+            { label: 'MQ-2 Gas', status: statusColor, ppm: ppmText },
+            { label: 'ESP8266 Wi-Fi', status: port ? 'green' : 'yellow', ppm: port ? 'Connected' : 'Standby' },
+            { label: 'System Temp', status: 'green', ppm: '28.4°C' }
+        ];
+        renderSensorPills(pills);
+    }
+
+    emergencyBtn.addEventListener('click', () => {
+        stopSimulation();
+        updateDashboardValues(1650);
+    });
+
+    simulateBtn.addEventListener('click', () => {
+        if (isSimulating) {
+            stopSimulation();
+            simulateBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Simulate data';
+            simulateBtn.style.background = 'rgba(245, 158, 11, 0.2)';
+        } else {
+            startSimulation();
+            simulateBtn.innerHTML = '<i class="fa-solid fa-stop"></i> Stop Simulation';
+            simulateBtn.style.background = 'rgba(245, 158, 11, 0.4)';
+        }
+    });
+
+    resetBtn.addEventListener('click', () => {
+        stopSimulation();
+        simulateBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Simulate data';
+        simulateBtn.style.background = 'rgba(245, 158, 11, 0.2)';
+        updateDashboardValues(120);
+    });
+
+    function startSimulation() {
+        isSimulating = true;
+        let basePpm = 250;
+        simulationInterval = setInterval(() => {
+            let delta = (Math.random() - 0.45) * 80;
+            basePpm = Math.min(Math.max(basePpm + delta, 80), 1300);
+            updateDashboardValues(basePpm);
+        }, 1500);
+    }
+
+    function stopSimulation() {
+        isSimulating = false;
+        if (simulationInterval) {
+            clearInterval(simulationInterval);
+            simulationInterval = null;
+        }
+    }
+});
