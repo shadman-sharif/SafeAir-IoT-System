@@ -12,7 +12,7 @@
     --accent-red: #ef4444;
     --accent-yellow: #f59e0b;
     --accent-cyan: #06b6d4;
-    --glow-color: rgba(34, 197, 94, 0.12);
+    --glow-color: rgba(6, 182, 212, 0.25);
 }
 
 * {
@@ -36,8 +36,8 @@ html, body {
     width: 100vw;
     height: 100vh;
     background-image: 
-        linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     background-size: 30px 30px;
     z-index: 0;
     pointer-events: none;
@@ -52,12 +52,12 @@ html, body {
     background: radial-gradient(circle, var(--glow-color) 0%, rgba(0, 0, 0, 0) 70%);
     z-index: 0;
     pointer-events: none;
-    transition: background 1s ease;
-    filter: blur(70px);
+    animation: ambientPulse 4s ease-in-out infinite alternate;
+    filter: blur(50px);
 }
 
 .floating-particles {
-    display: none; /* Hidden on mobile for clean UI performance */
+    display: none;
 }
 
 .dashboard-layout {
@@ -68,7 +68,6 @@ html, body {
     z-index: 1;
 }
 
-/* Mobile-First Floating App Bar Header */
 .sidebar {
     background: rgba(5, 7, 12, 0.95);
     backdrop-filter: blur(20px);
@@ -94,8 +93,8 @@ html, body {
 .logo-icon {
     width: 36px;
     height: 36px;
-    background: rgba(6, 182, 212, 0.15);
-    border: 1px solid rgba(6, 182, 212, 0.4);
+    background: rgba(6, 182, 212, 0.25);
+    border: 2px solid rgba(6, 182, 212, 0.8);
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -118,7 +117,6 @@ html, body {
     letter-spacing: 0.5px;
 }
 
-/* Compact Bottom-Sheet Style or Horizontal Scroll Nav */
 .side-nav {
     display: flex;
     gap: 0.3rem;
@@ -144,12 +142,8 @@ html, body {
     transition: all 0.25s ease;
 }
 
-.nav-item::before {
-    display: none;
-}
-
 .nav-item.active {
-    background: rgba(6, 182, 212, 0.15);
+    background: rgba(6, 182, 212, 0.2);
     color: var(--accent-cyan);
 }
 
@@ -196,15 +190,15 @@ html, body {
 }
 
 .dot-status {
-    width: 7px;
-    height: 7px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     position: relative;
 }
 
-.dot-status.green { background-color: var(--accent-green); border-color: var(--accent-green); }
-.dot-status.yellow { background-color: var(--accent-yellow); border-color: var(--accent-yellow); }
-.dot-status.red { background-color: var(--accent-red); border-color: var(--accent-red); }
+.dot-status.green { background-color: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+.dot-status.yellow { background-color: var(--accent-yellow); box-shadow: 0 0 8px var(--accent-yellow); }
+.dot-status.red { background-color: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
 
 .esp-connection-status {
     display: flex;
@@ -228,20 +222,20 @@ html, body {
 }
 
 .connection-badge.disconnected {
-    background: rgba(239, 68, 68, 0.1);
+    background: rgba(239, 68, 68, 0.15);
     color: var(--accent-red);
-    border: 1px solid rgba(239, 68, 68, 0.25);
+    border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
 .connection-badge.connected {
-    background: rgba(34, 197, 94, 0.1);
+    background: rgba(34, 197, 94, 0.15);
     color: var(--accent-green);
-    border: 1px solid rgba(34, 197, 94, 0.25);
+    border: 1px solid rgba(34, 197, 94, 0.4);
 }
 
 .btn-connect {
-    background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(6, 182, 212, 0.05));
-    border: 1px solid rgba(6, 182, 212, 0.4);
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(6, 182, 212, 0.1));
+    border: 1px solid rgba(6, 182, 212, 0.6);
     color: var(--accent-cyan);
     padding: 0.4rem 1rem;
     border-radius: 10px;
@@ -300,8 +294,8 @@ html, body {
 .status-icon-box {
     width: 48px;
     height: 48px;
-    background: rgba(34, 197, 94, 0.15);
-    border: 1px solid rgba(34, 197, 94, 0.4);
+    background: rgba(34, 197, 94, 0.2);
+    border: 2px solid rgba(34, 197, 94, 0.6);
     border-radius: 14px;
     display: flex;
     align-items: center;
@@ -309,6 +303,7 @@ html, body {
     color: var(--accent-green);
     font-size: 1.2rem;
     flex-shrink: 0;
+    box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
 }
 
 .status-desc {
@@ -352,7 +347,7 @@ html, body {
 .slider-track {
     width: 100%;
     height: 8px;
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 4px;
     overflow: hidden;
     margin-bottom: 0.5rem;
@@ -362,6 +357,7 @@ html, body {
     height: 100%;
     background: var(--accent-green);
     border-radius: 4px;
+    box-shadow: 0 0 10px var(--accent-green);
     transition: width 0.6s ease;
 }
 
@@ -394,21 +390,21 @@ html, body {
 }
 
 .btn-emergency {
-    background: rgba(239, 68, 68, 0.1);
+    background: rgba(239, 68, 68, 0.2);
     color: var(--accent-red);
-    border-color: rgba(239, 68, 68, 0.3);
+    border-color: rgba(239, 68, 68, 0.5);
 }
 
 .btn-simulate {
-    background: rgba(245, 158, 11, 0.1);
+    background: rgba(245, 158, 11, 0.2);
     color: var(--accent-yellow);
-    border-color: rgba(245, 158, 11, 0.3);
+    border-color: rgba(245, 158, 11, 0.5);
 }
 
 .btn-reset {
-    background: rgba(34, 197, 94, 0.1);
+    background: rgba(34, 197, 94, 0.2);
     color: var(--accent-green);
-    border-color: rgba(34, 197, 94, 0.3);
+    border-color: rgba(34, 197, 94, 0.5);
 }
 
 .chart-card {
@@ -459,7 +455,125 @@ html, body {
     font-size: 0.65rem;
 }
 
-/* PC / Tablet Responsive Overrides */
+@keyframes floatParticle {
+    0% {
+        transform: translateY(105vh) scale(0.8);
+        opacity: 0;
+    }
+    15% {
+        opacity: 1;
+    }
+    85% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-10vh) scale(1.6);
+        opacity: 0;
+    }
+}
+
+@keyframes pulseGlowRing {
+    0% {
+        transform: scale(0.92);
+        box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.8);
+    }
+    70% {
+        transform: scale(1.12);
+        box-shadow: 0 0 0 16px rgba(6, 182, 212, 0);
+    }
+    100% {
+        transform: scale(0.92);
+        box-shadow: 0 0 0 0 rgba(6, 182, 212, 0);
+    }
+}
+
+@keyframes liveDotPulse {
+    0% {
+        transform: scale(0.9);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 1);
+    }
+    70% {
+        transform: scale(1.2);
+        box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+    }
+    100% {
+        transform: scale(0.9);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    }
+}
+
+@keyframes ambientPulse {
+    0% {
+        opacity: 0.6;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1.08);
+    }
+}
+
+.particle {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    background: var(--accent-cyan);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: floatParticle linear infinite;
+    opacity: 0;
+    box-shadow: 0 0 10px var(--accent-cyan), 0 0 20px var(--accent-cyan);
+}
+
+.pulse-glow {
+    animation: pulseGlowRing 2s infinite ease-in-out;
+}
+
+.live-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    background-color: var(--accent-green);
+    border-radius: 50%;
+    animation: liveDotPulse 1.5s infinite ease-in-out;
+    margin-right: 6px;
+    box-shadow: 0 0 10px var(--accent-green);
+}
+
+.wifi-indicator-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    color: var(--accent-cyan);
+}
+
+.pulse-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 2px solid rgba(6, 182, 212, 0.7);
+    border-radius: 50%;
+    animation: pulseGlowRing 1.8s infinite ease-in-out;
+}
+
+.ripple {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ripple:active {
+    transform: scale(0.94);
+    box-shadow: 0 0 15px rgba(6, 182, 212, 0.6);
+}
+
+.fade-text {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
 @media (min-width: 768px) {
     .dashboard-layout {
         display: grid;
@@ -678,9 +792,9 @@ html, body {
 
 @keyframes criticalFlash {
     0%, 100% { border-color: rgba(239, 68, 68, 0.4); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); }
-    50% { border-color: rgba(239, 68, 68, 1); box-shadow: 0 0 40px rgba(239, 68, 68, 0.6); }
+    50% { border-color: rgba(239, 68, 68, 1); box-shadow: 0 0 50px rgba(239, 68, 68, 0.8); }
 }
 
 .card.state-danger {
-    animation: criticalFlash 1.1s infinite ease-in-out;
+    animation: criticalFlash 0.9s infinite ease-in-out;
 }
