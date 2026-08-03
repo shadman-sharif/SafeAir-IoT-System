@@ -1,0 +1,16 @@
+{
+    "system_info": {
+        "app_name": "SafeAir",
+        "version": "3.0.0-hardware",
+        "communication": "Web Serial API / USB"
+    },
+    "sensors": [
+        {
+            "id": 1,
+            "name": "ESP8266 Node",
+            "location": "Direct USB Serial",
+            "unit": "ppm",
+            "baud_rate": 115200
+        }
+    ]
+}

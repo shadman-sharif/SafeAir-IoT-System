@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeAir - ESP8266 IoT Gas Detection Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="ambient-glow" id="ambientGlow"></div>
+    <div class="grid-background"></div>
+    <div class="floating-particles" id="particleContainer">
+        <span class="particle" style="left: 10%; animation-duration: 12s; animation-delay: 0s;"></span>
+        <span class="particle" style="left: 30%; animation-duration: 16s; animation-delay: 2s;"></span>
+        <span class="particle" style="left: 55%; animation-duration: 14s; animation-delay: 4s;"></span>
+        <span class="particle" style="left: 75%; animation-duration: 19s; animation-delay: 1s;"></span>
+        <span class="particle" style="left: 90%; animation-duration: 15s; animation-delay: 3s;"></span>
+    </div>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-icon pulse-glow"><i class="fa-solid fa-shield-halved"></i></div>
+                <div class="logo-text">
+                    <h2>SafeAir</h2>
+                    <span>HARDWARE IOT</span>
+                </div>
+            </div>
+            <nav class="side-nav">
+                <a href="#home" class="nav-item active"><i class="fa-solid fa-house"></i> Dashboard</a>
+                <a href="#hardware" class="nav-item"><i class="fa-solid fa-microchip"></i> ESP8266 Link</a>
+                <a href="#alerts" class="nav-item"><i class="fa-solid fa-bell"></i> Alerts</a>
+                <a href="#settings" class="nav-item"><i class="fa-solid fa-gear"></i> Settings</a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="system-status-pill">
+                    <span class="live-dot"></span> System Optimal
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="sensor-pills" id="sensorPillsContainer"></div>
+                <div class="esp-connection-status">
+                    <span class="connection-badge disconnected" id="connectionBadge">
+                        <i class="fa-solid fa-circle"></i> <span id="connectionText">ESP8266 Offline</span>
+                    </span>
+                    <button class="btn-connect" id="serialConnectBtn"><i class="fa-solid fa-plug"></i> Connect USB</button>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <div class="card status-display-card" id="mainCard">
+                    <div class="card-top-info">
+                        <span class="live-status-label">HARDWARE TELEMETRY</span>
+                        <div class="wifi-indicator-box">
+                            <i class="fa-solid fa-wifi" id="wifiIcon"></i>
+                            <span class="pulse-ring"></span>
+                        </div>
+                    </div>
+                    <div class="status-hero">
+                        <h1 id="statusTitle" class="fade-text">Safe</h1>
+                        <div class="status-icon-box" id="statusIconBox">
+                            <i class="fa-solid fa-heart-pulse" id="heroIcon"></i>
+                        </div>
+                    </div>
+                    <p class="status-desc" id="statusDesc">Awaiting ESP8266 serial data stream...</p>
+                    
+                    <div class="ppm-counter-wrapper">
+                        <div class="ppm-big-val"><span id="currentPpm">0</span> <span class="ppm-unit">ppm</span></div>
+                        <div class="update-time-stamp"><i class="fa-regular fa-clock"></i> <span id="timestampText">Waiting for sync</span></div>
+                    </div>
+
+                    <div class="ppm-range-slider">
+                        <div class="slider-track">
+                            <div class="slider-fill" id="sliderFill" style="width: 0%;"></div>
+                        </div>
+                        <div class="slider-labels">
+                            <span>0</span>
+                            <span>SAFE &lt; 400</span>
+                            <span>WARN &lt; 800</span>
+                            <span>1500+</span>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons-row">
+                        <button class="btn-emergency ripple" id="emergencyBtn"><i class="fa-solid fa-triangle-exclamation"></i> Emergency</button>
+                        <button class="btn-simulate ripple" id="simulateBtn"><i class="fa-solid fa-wand-magic-sparkles"></i> Simulate data</button>
+                        <button class="btn-reset ripple" id="resetBtn"><i class="fa-solid fa-shield-check"></i> Reset state</button>
+                    </div>
+                </div>
+
+                <div class="card chart-card">
+                    <div class="chart-top-bar">
+                        <h3>Live ESP8266 sensor stream</h3>
+                        <span class="chart-sub">Real-time serial baud 115200</span>
+                    </div>
+                    <div class="chart-canvas-container">
+                        <canvas id="liveGasChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="main-footer">
+                <p>&copy; 2026 SafeAir IoT Systems By Shadman & Ahnaf. All rights reserved.</p>
+                <div class="footer-links">
+                    <span>ESP8266 Firmware v1.2</span>
+                    <span>•</span>
+                    <span>NodeMCU Serial Link Active</span>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
